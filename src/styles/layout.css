@@ -1,0 +1,11 @@
+/* App shell, sidebar, navbar layout */
+.app-layout { display: flex; flex-direction: column; height: 100vh; }
+.navbar { height: var(--navbar-height); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 16px; box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 100; }
+.logo { font-weight: 700; font-size: 18px; color: var(--primary); min-width: var(--sidebar-width); }
+.nav-search { flex: 1; max-width: 400px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); font-size: 13px; }
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.app-body { display: flex; flex: 1; overflow: hidden; }
+.sidebar { width: var(--sidebar-width); background: var(--surface); border-right: 1px solid var(--border); padding: 16px 0; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.nav-link { display: block; padding: 10px 20px; color: var(--text-muted); border-radius: 0; transition: all 0.15s; font-size: 13px; font-weight: 500; }
+.nav-link:hover, .nav-link.active { background: #eff6ff; color: var(--primary); border-right: 3px solid var(--primary); }
+.page-content { flex: 1; overflow-y: auto; padding: 24px; }
