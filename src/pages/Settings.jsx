@@ -77,14 +77,32 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const handleSavePassword = () => {
+  const handleSavePassword = async () => {
     setPassError("");
     if (!passwords.current) return setPassError("Enter your current password.");
     if (passwords.newPass.length < 6) return setPassError("New password must be at least 6 characters.");
     if (passwords.newPass !== passwords.confirm) return setPassError("Passwords do not match.");
-    setSaved(true);
-    setPasswords({ current: "", newPass: "", confirm: "" });
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      const res = await fetch("http://localhost/pharmasys-backend/api/auth/change-password.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + user.token
+        },
+        body: JSON.stringify({
+          id: user.id,
+          current_password: passwords.current,
+          new_password: passwords.newPass,
+        })
+      });
+      const data = await res.json();
+      if (!data.success) return setPassError(data.message);
+      setSaved(true);
+      setPasswords({ current: "", newPass: "", confirm: "" });
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e) {
+      setPassError("Failed to connect to server.");
+    }
   };
 
   const handleSavePrefs = () => {
@@ -126,8 +144,6 @@ export default function Settings() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ ...S.card, padding: 20, textAlign: "center", marginBottom: 8 }}>
-
-            {/* Profile Photo */}
             <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 12px" }}>
               {photo ? (
                 <img src={photo} alt="Profile" style={{ width: 80, height: 80, borderRadius: 20, objectFit: "cover", border: "3px solid #e8eef5" }} />
@@ -136,18 +152,14 @@ export default function Settings() {
                   {(user?.name || "P").charAt(0)}
                 </div>
               )}
-              <button
-                onClick={() => fileRef.current.click()}
-                style={{ position: "absolute", bottom: -6, right: -6, width: 26, height: 26, borderRadius: "50%", background: "#0d1b2a", border: "2px solid #fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>
+              <button onClick={() => fileRef.current.click()} style={{ position: "absolute", bottom: -6, right: -6, width: 26, height: 26, borderRadius: "50%", background: "#0d1b2a", border: "2px solid #fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>
                 📷
               </button>
               <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoChange} />
             </div>
-
             <div style={{ fontSize: 14, fontWeight: 800, color: "#0d1b2a" }}>{user?.name || "Pharmacist"}</div>
             <div style={{ fontSize: 11, color: "#8a9ab5", marginTop: 3 }}>{user?.email || ""}</div>
             <div style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "rgba(0,229,192,0.1)", color: "#00b89c", marginTop: 8, display: "inline-block" }}>{user?.role || "pharmacist"}</div>
-
             {photo && (
               <div style={{ marginTop: 10 }}>
                 <button onClick={handleRemovePhoto} style={{ fontSize: 11, color: "#f43f5e", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>

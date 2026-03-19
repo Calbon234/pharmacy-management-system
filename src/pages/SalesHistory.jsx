@@ -42,12 +42,18 @@ export default function SalesHistory() {
     pg: { padding: "28px 32px", fontFamily: "'Plus Jakarta Sans',sans-serif", background: "#f4f7fb", minHeight: "100vh" },
     card: { background: "#fff", borderRadius: 16, border: "1px solid #e8eef5", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
     inp: { padding: "9px 13px", borderRadius: 10, fontSize: 13, fontFamily: "inherit", border: "1.5px solid #e3eaf2", outline: "none", color: "#0d1b2a", background: "#fff" },
-    btn: (active) => ({ padding: "9px 14px", borderRadius: 10, border: active ? "none" : "1.5px solid #e3eaf2", background: active ? "linear-gradient(135deg,#00e5c0,#0080ff)" : "#fff", color: active ? "#fff" : "#0d1b2a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }),
   };
+
+  const kpis = [
+    { icon: "🧾", label: "Transactions", val: filtered.length, color: "#00e5c0", filter: "All" },
+    { icon: "💰", label: "Total Revenue", val: `KES ${totalRevenue.toLocaleString()}`, color: "#6366f1", filter: "All" },
+    { icon: "💵", label: "Cash Sales", val: filtered.filter(s => s.payment_method === "Cash").length, color: "#f59e0b", filter: "Cash" },
+    { icon: "📱", label: "M-Pesa Sales", val: filtered.filter(s => s.payment_method === "M-Pesa").length, color: "#f43f5e", filter: "M-Pesa" },
+  ];
 
   return (
     <div style={S.pg}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'); @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
@@ -56,15 +62,18 @@ export default function SalesHistory() {
         </div>
       </div>
 
+      {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
-        {[
-          { icon: "🧾", label: "Transactions", val: filtered.length, color: "#00e5c0" },
-          { icon: "💰", label: "Total Revenue", val: `KES ${totalRevenue.toLocaleString()}`, color: "#6366f1" },
-          { icon: "💵", label: "Cash Sales", val: filtered.filter(s => s.payment_method === "Cash").length, color: "#f59e0b" },
-          { icon: "📱", label: "M-Pesa Sales", val: filtered.filter(s => s.payment_method === "M-Pesa").length, color: "#f43f5e" },
-        ].map((k, i) => (
-          <div key={i} style={{ ...S.card, padding: 20, position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: k.color }} />
+        {kpis.map((k, i) => (
+          <div key={i}
+            onClick={() => setPayFilter(k.filter)}
+            style={{
+              borderRadius: 16, padding: 20, cursor: "pointer", transition: "all 0.2s",
+              background: payFilter === k.filter && k.filter !== "All" ? `${k.color}15` : "#fff",
+              border: payFilter === k.filter && k.filter !== "All" ? `1.5px solid ${k.color}` : "1px solid #e8eef5",
+              boxShadow: payFilter === k.filter && k.filter !== "All" ? `0 8px 24px ${k.color}30` : "0 1px 6px rgba(0,0,0,0.04)",
+              transform: payFilter === k.filter && k.filter !== "All" ? "translateY(-2px)" : "none",
+            }}>
             <div style={{ fontSize: 22, marginBottom: 10 }}>{k.icon}</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#0d1b2a", letterSpacing: "-0.6px", lineHeight: 1, marginBottom: 4 }}>{loading ? "…" : k.val}</div>
             <div style={{ fontSize: 11, color: "#8a9ab5", fontWeight: 600, textTransform: "uppercase" }}>{k.label}</div>
@@ -81,10 +90,10 @@ export default function SalesHistory() {
           <input type="date" style={S.inp} value={from} onChange={e => setFrom(e.target.value)} />
           <input type="date" style={S.inp} value={to} onChange={e => setTo(e.target.value)} />
           {["All", "Cash", "M-Pesa", "Card"].map(p => (
-            <button key={p} onClick={() => setPayFilter(p)} style={S.btn(payFilter === p)}>{p}</button>
+            <button key={p} onClick={() => setPayFilter(p)} style={{ padding: "9px 14px", borderRadius: 10, border: payFilter === p ? "none" : "1.5px solid #e3eaf2", background: payFilter === p ? "linear-gradient(135deg,#00e5c0,#0080ff)" : "#fff", color: payFilter === p ? "#fff" : "#0d1b2a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{p}</button>
           ))}
           {(from || to || payFilter !== "All") && (
-            <button onClick={() => { setFrom(""); setTo(""); setPayFilter("All"); }} style={{ ...S.btn(false), color: "#f43f5e" }}>✕ Clear</button>
+            <button onClick={() => { setFrom(""); setTo(""); setPayFilter("All"); }} style={{ padding: "9px 14px", borderRadius: 10, border: "1.5px solid #e3eaf2", background: "#fff", color: "#f43f5e", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>✕ Clear</button>
           )}
         </div>
 
@@ -99,9 +108,12 @@ export default function SalesHistory() {
             </thead>
             <tbody>
               {loading ? [1, 2, 3, 4].map(i => (
-                <tr key={i}><td colSpan={9} style={{ padding: "12px 16px" }}><div style={{ height: 20, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", borderRadius: 8 }} /></td></tr>
+                <tr key={i}><td colSpan={9} style={{ padding: "12px 16px" }}><div style={{ height: 20, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.2s infinite", borderRadius: 8 }} /></td></tr>
               )) : filtered.length === 0 ? (
-                <tr><td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#8a9ab5" }}>No sales found</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#8a9ab5" }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>🧾</div>
+                  No sales found
+                </td></tr>
               ) : filtered.map(s => {
                 const pc = payColors[s.payment_method] || { bg: "#f1f5f9", color: "#64748b" };
                 const isOpen = expanded === s.id;

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getMedicines, addMedicine, updateMedicine, deleteMedicine } from "../services/inventoryService";
 import { getSuppliers } from "../services/supplierService";
 
-const empty = { name: "", category: "", supplier_id: "", price: "", stock: "", min_stock: "20", expiry_date: "", description: "" };
+const empty = { name: "", batch_number: "", category: "", supplier_id: "", price: "", stock: "", min_stock: "20", expiry_date: "", description: "" };
 const CATEGORIES = ["Antibiotics","Analgesics","Antidiabetics","Antihypertensives","Gastrointestinal","Vitamins","Respiratory","Other"];
 
 export default function Inventory() {
@@ -34,9 +34,15 @@ export default function Inventory() {
   useEffect(() => { fetchData(); }, []);
 
   const filtered = medicines.filter(m => {
-    const ms = m.name.toLowerCase().includes(search.toLowerCase()) || (m.category||"").toLowerCase().includes(search.toLowerCase());
+    const ms = m.name.toLowerCase().includes(search.toLowerCase()) ||
+      (m.category||"").toLowerCase().includes(search.toLowerCase()) ||
+      (m.batch_number||"").toLowerCase().includes(search.toLowerCase());
     const mc = !catFilter || m.category === catFilter;
-    const mst = stockFilter === "all" ? true : stockFilter === "low" ? m.stock <= m.min_stock && m.stock > 0 : stockFilter === "out" ? m.stock === 0 : true;
+    const mst = stockFilter === "all" ? true
+      : stockFilter === "low" ? m.stock <= m.min_stock && m.stock > 0
+      : stockFilter === "out" ? m.stock === 0
+      : stockFilter === "instock" ? m.stock > m.min_stock
+      : true;
     return ms && mc && mst;
   });
 
@@ -53,7 +59,20 @@ export default function Inventory() {
   };
 
   const openAdd = () => { setForm(empty); setErrors({}); setEditId(null); setModal("form"); };
-  const openEdit = (m) => { setForm({ name: m.name, category: m.category||"", supplier_id: m.supplier_id||"", price: m.price, stock: m.stock, min_stock: m.min_stock||20, expiry_date: m.expiry_date||"", description: m.description||"" }); setEditId(m.id); setErrors({}); setModal("form"); };
+  const openEdit = (m) => {
+    setForm({
+      name: m.name,
+      batch_number: m.batch_number||"",
+      category: m.category||"",
+      supplier_id: m.supplier_id||"",
+      price: m.price,
+      stock: m.stock,
+      min_stock: m.min_stock||20,
+      expiry_date: m.expiry_date||"",
+      description: m.description||""
+    });
+    setEditId(m.id); setErrors({}); setModal("form");
+  };
 
   const handleSave = async () => {
     if (!validate()) return;
@@ -90,6 +109,13 @@ export default function Inventory() {
     btn: (v) => ({ display:"inline-flex", alignItems:"center", gap:6, padding:"9px 16px", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", border:"none", background: v==="primary"?"linear-gradient(135deg,#00e5c0,#0080ff)": v==="danger"?"#fee2e2":"#fff", color: v==="primary"?"#fff": v==="danger"?"#dc2626":"#0d1b2a", ...(v==="outline"?{border:"1.5px solid #e3eaf2"}:{}) }),
   };
 
+  const kpis = [
+    {icon:"💊",label:"Total Medicines",val:medicines.length,color:"#00e5c0",filter:"all"},
+    {icon:"✅",label:"In Stock",val:medicines.filter(m=>m.stock>m.min_stock).length,color:"#6366f1",filter:"instock"},
+    {icon:"⚠️",label:"Low Stock",val:medicines.filter(m=>m.stock<=m.min_stock&&m.stock>0).length,color:"#f59e0b",filter:"low"},
+    {icon:"🚫",label:"Out of Stock",val:medicines.filter(m=>m.stock===0).length,color:"#f43f5e",filter:"out"},
+  ];
+
   return (
     <div style={S.pg}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'); @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
@@ -102,17 +128,21 @@ export default function Inventory() {
         <button style={S.btn("primary")} onClick={openAdd}>＋ Add Medicine</button>
       </div>
 
+      {/* KPI Cards */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
-        {[
-          {icon:"💊",label:"Total Medicines",val:medicines.length,color:"#00e5c0",bg:"rgba(0,229,192,0.1)"},
-          {icon:"✅",label:"In Stock",val:medicines.filter(m=>m.stock>m.min_stock).length,color:"#6366f1",bg:"rgba(99,102,241,0.1)"},
-          {icon:"⚠️",label:"Low Stock",val:medicines.filter(m=>m.stock<=m.min_stock&&m.stock>0).length,color:"#f59e0b",bg:"rgba(245,158,11,0.1)"},
-          {icon:"🚫",label:"Out of Stock",val:medicines.filter(m=>m.stock===0).length,color:"#f43f5e",bg:"rgba(244,63,94,0.1)"},
-        ].map((k,i)=>(
-          <div key={i} style={{...S.card,padding:20,position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:k.color}}/>
+        {kpis.map((k,i)=>(
+          <div key={i}
+            onClick={()=>{setStockFilter(k.filter);setPage(1);}}
+            style={{
+              borderRadius:16, padding:20, position:"relative", overflow:"hidden",
+              cursor:"pointer", transition:"all 0.2s",
+              background: stockFilter===k.filter ? `${k.color}15` : "#fff",
+              border: stockFilter===k.filter ? `1.5px solid ${k.color}` : "1px solid #e8eef5",
+              transform: stockFilter===k.filter ? "translateY(-2px)" : "none",
+              boxShadow: stockFilter===k.filter ? `0 8px 24px ${k.color}30` : "0 1px 6px rgba(0,0,0,0.04)",
+            }}>
             {loading ? <div style={{height:60,background:"linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.2s infinite",borderRadius:8}}/> : <>
-              <div style={{width:38,height:38,borderRadius:10,background:k.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:12}}>{k.icon}</div>
+              <div style={{width:38,height:38,borderRadius:10,background:`${k.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:12}}>{k.icon}</div>
               <div style={{fontSize:24,fontWeight:800,color:"#0d1b2a",letterSpacing:"-0.7px",lineHeight:1,marginBottom:4}}>{k.val}</div>
               <div style={{fontSize:11,color:"#8a9ab5",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px"}}>{k.label}</div>
             </>}
@@ -124,40 +154,41 @@ export default function Inventory() {
         <div style={{display:"flex",gap:10,padding:"16px 20px",borderBottom:"1px solid #f0f4f8",flexWrap:"wrap"}}>
           <div style={{position:"relative",flex:1,minWidth:180}}>
             <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",fontSize:13}}>🔍</span>
-            <input style={{...S.inp(false),paddingLeft:34}} placeholder="Search medicines..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+            <input style={{...S.inp(false),paddingLeft:34}} placeholder="Search by name, batch or category..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
           </div>
           <select style={{...S.inp(false),width:"auto"}} value={catFilter} onChange={e=>{setCatFilter(e.target.value);setPage(1);}}>
             <option value="">All Categories</option>
             {CATEGORIES.map(c=><option key={c}>{c}</option>)}
           </select>
-          {["all","low","out"].map(s=>(
-            <button key={s} onClick={()=>{setStockFilter(s);setPage(1);}} style={{...S.btn(stockFilter===s?"primary":"outline"),padding:"9px 14px"}}>
-              {s==="all"?"All":s==="low"?"Low Stock":"Out of Stock"}
-            </button>
-          ))}
         </div>
 
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead>
               <tr style={{background:"#f8fafc"}}>
-                {["Medicine","Category","Supplier","Price","Stock","Expiry","Status","Actions"].map(h=>(
+                {["Medicine","Batch","Category","Supplier","Price","Stock","Expiry","Status","Actions"].map(h=>(
                   <th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:"#8a9ab5",textTransform:"uppercase",letterSpacing:"0.6px",whiteSpace:"nowrap"}}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? [1,2,3,4,5].map(i=>(
-                <tr key={i}><td colSpan={8} style={{padding:"12px 16px"}}><div style={{height:20,background:"linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.2s infinite",borderRadius:8}}/></td></tr>
+                <tr key={i}><td colSpan={9} style={{padding:"12px 16px"}}><div style={{height:20,background:"linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.2s infinite",borderRadius:8}}/></td></tr>
               )) : paginated.length === 0 ? (
-                <tr><td colSpan={8} style={{textAlign:"center",padding:48,color:"#8a9ab5",fontSize:14}}>No medicines found</td></tr>
+                <tr><td colSpan={9} style={{textAlign:"center",padding:48,color:"#8a9ab5",fontSize:14}}>
+                  <div style={{fontSize:36,marginBottom:8}}>🔍</div>
+                  No medicines found
+                </td></tr>
               ) : paginated.map(m => {
                 const st = stockStatus(m);
                 return (
                   <tr key={m.id} style={{borderTop:"1px solid #f0f4f8"}}
                     onMouseEnter={e=>e.currentTarget.style.background="#fafcff"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <td style={{padding:"13px 16px",fontWeight:700,color:"#0d1b2a",fontSize:13}}>{m.name}</td>
+                    <td style={{padding:"13px 16px"}}>
+                      <div style={{fontWeight:700,color:"#0d1b2a",fontSize:13}}>{m.name}</div>
+                    </td>
+                    <td style={{padding:"13px 16px",fontSize:12,color:"#6366f1",fontWeight:600}}>{m.batch_number||"—"}</td>
                     <td style={{padding:"13px 16px",fontSize:12,color:"#374151"}}>{m.category||"—"}</td>
                     <td style={{padding:"13px 16px",fontSize:12,color:"#374151"}}>{m.supplier_name||"—"}</td>
                     <td style={{padding:"13px 16px",fontWeight:700,color:"#00b89c",fontSize:13}}>KES {parseFloat(m.price).toFixed(2)}</td>
@@ -187,7 +218,9 @@ export default function Inventory() {
         </div>
 
         <div style={{padding:"13px 20px",borderTop:"1px solid #f0f4f8",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{fontSize:12,color:"#8a9ab5",fontWeight:600}}>Showing {Math.min((page-1)*PER_PAGE+1,filtered.length)}–{Math.min(page*PER_PAGE,filtered.length)} of {filtered.length}</div>
+          <div style={{fontSize:12,color:"#8a9ab5",fontWeight:600}}>
+            Showing {filtered.length === 0 ? 0 : Math.min((page-1)*PER_PAGE+1,filtered.length)}–{Math.min(page*PER_PAGE,filtered.length)} of {filtered.length}
+          </div>
           <div style={{display:"flex",gap:6}}>
             <button disabled={page===1} onClick={()=>setPage(p=>p-1)} style={{...S.btn("outline"),padding:"6px 12px",opacity:page===1?0.4:1}}>← Prev</button>
             {Array.from({length:totalPages},(_,i)=>i+1).map(n=>(
@@ -198,9 +231,10 @@ export default function Inventory() {
         </div>
       </div>
 
+      {/* Add/Edit Modal */}
       {modal==="form" && (
         <div style={{position:"fixed",inset:0,background:"rgba(13,27,42,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
-          <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:520,boxShadow:"0 24px 64px rgba(0,0,0,0.15)",maxHeight:"90vh",overflowY:"auto"}}>
+          <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:560,boxShadow:"0 24px 64px rgba(0,0,0,0.15)",maxHeight:"90vh",overflowY:"auto"}}>
             <div style={{padding:"22px 24px",borderBottom:"1px solid #f0f4f8",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,background:"#fff",zIndex:1}}>
               <div style={{fontSize:17,fontWeight:800,color:"#0d1b2a"}}>{editId?"✏️ Edit Medicine":"➕ Add Medicine"}</div>
               <button onClick={()=>setModal(null)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#8a9ab5"}}>✕</button>
@@ -208,6 +242,7 @@ export default function Inventory() {
             <div style={{padding:"22px 24px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
               {[
                 {key:"name",label:"Medicine Name",placeholder:"e.g. Amoxicillin 500mg",full:true},
+                {key:"batch_number",label:"Batch Number",placeholder:"e.g. BATCH-2024-001"},
                 {key:"price",label:"Price (KES)",placeholder:"e.g. 12.50"},
                 {key:"stock",label:"Stock Quantity",placeholder:"e.g. 100"},
                 {key:"min_stock",label:"Min Stock Level",placeholder:"e.g. 20"},
@@ -246,6 +281,7 @@ export default function Inventory() {
         </div>
       )}
 
+      {/* Delete Modal */}
       {modal==="delete"&&deleteTarget&&(
         <div style={{position:"fixed",inset:0,background:"rgba(13,27,42,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
           <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:380,padding:28,boxShadow:"0 24px 64px rgba(0,0,0,0.15)",textAlign:"center"}}>

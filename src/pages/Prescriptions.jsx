@@ -75,9 +75,16 @@ export default function Prescriptions() {
     btn: (v) => ({ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: "none", background: v === "primary" ? "linear-gradient(135deg,#00e5c0,#0080ff)" : v === "danger" ? "#fee2e2" : "#fff", color: v === "primary" ? "#fff" : v === "danger" ? "#dc2626" : "#0d1b2a", ...(v === "outline" ? { border: "1.5px solid #e3eaf2" } : {}) }),
   };
 
+  const kpis = [
+    { icon: "📋", label: "Total", val: prescriptions.length, color: "#00e5c0", filter: "All" },
+    { icon: "⏳", label: "Pending", val: prescriptions.filter(r => r.status === "Pending").length, color: "#f59e0b", filter: "Pending" },
+    { icon: "✅", label: "Fulfilled", val: prescriptions.filter(r => r.status === "Fulfilled").length, color: "#6366f1", filter: "Fulfilled" },
+    { icon: "❌", label: "Cancelled", val: prescriptions.filter(r => r.status === "Cancelled").length, color: "#f43f5e", filter: "Cancelled" },
+  ];
+
   return (
     <div style={S.pg}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'); @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
@@ -87,24 +94,26 @@ export default function Prescriptions() {
         <button style={S.btn("primary")} onClick={() => { setForm(emptyForm); setModal("form"); }}>＋ New Prescription</button>
       </div>
 
+      {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
-        {[
-          { icon: "📋", label: "Total", val: prescriptions.length, color: "#00e5c0" },
-          { icon: "⏳", label: "Pending", val: prescriptions.filter(r => r.status === "Pending").length, color: "#f59e0b" },
-          { icon: "✅", label: "Fulfilled", val: prescriptions.filter(r => r.status === "Fulfilled").length, color: "#6366f1" },
-          { icon: "❌", label: "Cancelled", val: prescriptions.filter(r => r.status === "Cancelled").length, color: "#f43f5e" },
-        ].map((k, i) => (
-          <div key={i} style={{ ...S.card, padding: 20, position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: k.color }} />
+        {kpis.map((k, i) => (
+          <div key={i}
+            onClick={() => setTab(k.filter)}
+            style={{
+              borderRadius: 16, padding: 20, cursor: "pointer", transition: "all 0.2s",
+              background: tab === k.filter ? `${k.color}15` : "#fff",
+              border: tab === k.filter ? `1.5px solid ${k.color}` : "1px solid #e8eef5",
+              boxShadow: tab === k.filter ? `0 8px 24px ${k.color}30` : "0 1px 6px rgba(0,0,0,0.04)",
+              transform: tab === k.filter ? "translateY(-2px)" : "none",
+            }}>
             <div style={{ fontSize: 24, marginBottom: 10 }}>{k.icon}</div>
             <div style={{ fontSize: 26, fontWeight: 800, color: "#0d1b2a", letterSpacing: "-0.7px", lineHeight: 1, marginBottom: 4 }}>{loading ? "…" : k.val}</div>
-            <div style={{ fontSize: 11, color: "#8a9ab5", fontWeight: 600, textTransform: "uppercase" }}>{k.label}</div>
-          </div>
+            <div style={{ fontSize: 11, color: "#8a9ab5", fontWeight: 600, textTransform: "uppercase" }}>{k.label}</div>          </div>
         ))}
       </div>
 
       <div style={S.card}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f4f8", display: "flex", gap: 6 }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f4f8", display: "flex", gap: 6, flexWrap: "wrap" }}>
           {["All", "Pending", "Fulfilled", "Partial", "Cancelled"].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding: "7px 16px", borderRadius: 9, border: "none", background: tab === t ? "#0d1b2a" : "#f4f7fb", color: tab === t ? "#fff" : "#8a9ab5", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t}</button>
           ))}
@@ -120,9 +129,12 @@ export default function Prescriptions() {
             </thead>
             <tbody>
               {loading ? [1, 2, 3].map(i => (
-                <tr key={i}><td colSpan={7} style={{ padding: "12px 16px" }}><div style={{ height: 20, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", borderRadius: 8 }} /></td></tr>
+                <tr key={i}><td colSpan={7} style={{ padding: "12px 16px" }}><div style={{ height: 20, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.2s infinite", borderRadius: 8 }} /></td></tr>
               )) : filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: "center", padding: 40, color: "#8a9ab5" }}>No prescriptions found</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: "center", padding: 40, color: "#8a9ab5" }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+                  No prescriptions found
+                </td></tr>
               ) : filtered.map(rx => {
                 const sc = statusColors[rx.status] || { bg: "#f1f5f9", color: "#64748b" };
                 return (
@@ -159,6 +171,7 @@ export default function Prescriptions() {
         </div>
       </div>
 
+      {/* New Prescription Modal */}
       {modal === "form" && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(13,27,42,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 }}>
           <div style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 560, boxShadow: "0 24px 64px rgba(0,0,0,0.15)", maxHeight: "90vh", overflowY: "auto" }}>
@@ -208,6 +221,7 @@ export default function Prescriptions() {
         </div>
       )}
 
+      {/* View Modal */}
       {modal === "view" && viewTarget && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(13,27,42,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 }}>
           <div style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 480, boxShadow: "0 24px 64px rgba(0,0,0,0.15)", maxHeight: "90vh", overflowY: "auto" }}>

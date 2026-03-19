@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 export default function Reports() {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [from, setFrom] = useState(() => {
@@ -34,34 +36,30 @@ export default function Reports() {
     URL.revokeObjectURL(url);
   };
 
-  const exportTopMedicinesCSV = () => {
-    if (!data?.top_medicines?.length) return alert("No data to export.");
-    exportCSV(data.top_medicines, `top-medicines-${from}-to-${to}.csv`);
-  };
-
-  const exportMonthlyCSV = () => {
-    if (!data?.monthly?.length) return alert("No data to export.");
-    exportCSV(data.monthly, `monthly-revenue-${from}-to-${to}.csv`);
-  };
-
-  const exportPaymentCSV = () => {
-    if (!data?.by_payment?.length) return alert("No data to export.");
-    exportCSV(data.by_payment, `payment-breakdown-${from}-to-${to}.csv`);
-  };
+  const exportTopMedicinesCSV = () => exportCSV(data?.top_medicines, `top-medicines-${from}-to-${to}.csv`);
+  const exportMonthlyCSV = () => exportCSV(data?.monthly, `monthly-revenue-${from}-to-${to}.csv`);
+  const exportPaymentCSV = () => exportCSV(data?.by_payment, `payment-breakdown-${from}-to-${to}.csv`);
 
   const S = {
     pg: { padding: "28px 32px", fontFamily: "'Plus Jakarta Sans',sans-serif", background: "#f4f7fb", minHeight: "100vh" },
     card: { background: "#fff", borderRadius: 16, border: "1px solid #e8eef5", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
     inp: { padding: "9px 13px", borderRadius: 10, fontSize: 13, fontFamily: "inherit", border: "1.5px solid #e3eaf2", outline: "none", color: "#0d1b2a", background: "#fff" },
-    btn: (v) => ({ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: "none", background: v === "primary" ? "linear-gradient(135deg,#00e5c0,#0080ff)" : "#fff", color: v === "primary" ? "#fff" : "#0d1b2a", border: v === "primary" ? "none" : "1.5px solid #e3eaf2" }),
+    btn: (v) => ({ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: v === "primary" ? "none" : "1.5px solid #e3eaf2", background: v === "primary" ? "linear-gradient(135deg,#00e5c0,#0080ff)" : "#fff", color: v === "primary" ? "#fff" : "#0d1b2a" }),
   };
 
   const maxMonthly = data?.monthly?.length ? Math.max(...data.monthly.map(m => m.revenue)) : 1;
   const payColors = { Cash: "#00e5c0", "M-Pesa": "#6366f1", Card: "#f59e0b" };
 
+  const kpis = [
+    { icon: "💰", label: "Total Revenue", val: loading ? "…" : `KES ${parseFloat(data?.revenue || 0).toLocaleString()}`, color: "#00e5c0", path: "/sales-history" },
+    { icon: "🧾", label: "Transactions", val: loading ? "…" : data?.transactions || 0, color: "#6366f1", path: "/sales-history" },
+    { icon: "👥", label: "New Patients", val: loading ? "…" : data?.new_patients || 0, color: "#f59e0b", path: "/patients" },
+    { icon: "📋", label: "RX Fulfilled", val: loading ? "…" : `${data?.rx_fulfilled || 0} / ${data?.rx_total || 0}`, color: "#f43f5e", path: "/prescriptions" },
+  ];
+
   return (
     <div style={S.pg}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'); @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
@@ -80,17 +78,16 @@ export default function Reports() {
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
-        {[
-          { icon: "💰", label: "Total Revenue", val: loading ? "…" : `KES ${parseFloat(data?.revenue || 0).toLocaleString()}`, color: "#00e5c0" },
-          { icon: "🧾", label: "Transactions", val: loading ? "…" : data?.transactions || 0, color: "#6366f1" },
-          { icon: "👥", label: "New Patients", val: loading ? "…" : data?.new_patients || 0, color: "#f59e0b" },
-          { icon: "📋", label: "RX Fulfilled", val: loading ? "…" : `${data?.rx_fulfilled || 0} / ${data?.rx_total || 0}`, color: "#f43f5e" },
-        ].map((k, i) => (
-          <div key={i} style={{ ...S.card, padding: 20, position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: k.color }} />
+        {kpis.map((k, i) => (
+          <div key={i}
+            onClick={() => navigate(k.path)}
+            style={{ ...S.card, padding: 20, cursor: "pointer", transition: "all 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = `0 8px 24px ${k.color}30`; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 6px rgba(0,0,0,0.04)"; }}>
             <div style={{ fontSize: 22, marginBottom: 10 }}>{k.icon}</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#0d1b2a", letterSpacing: "-0.7px", lineHeight: 1, marginBottom: 4 }}>{k.val}</div>
             <div style={{ fontSize: 11, color: "#8a9ab5", fontWeight: 600, textTransform: "uppercase" }}>{k.label}</div>
+            <div style={{ fontSize: 11, color: k.color, fontWeight: 600, marginTop: 6 }}>View details →</div>
           </div>
         ))}
       </div>
@@ -108,7 +105,7 @@ export default function Reports() {
           </div>
           <div style={{ padding: "24px" }}>
             {loading ? (
-              <div style={{ height: 160, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", borderRadius: 10 }} />
+              <div style={{ height: 160, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.2s infinite", borderRadius: 10 }} />
             ) : (
               <div style={{ display: "flex", alignItems: "flex-end", gap: 12, height: 160 }}>
                 {data?.monthly?.map((m, i) => (
@@ -138,7 +135,7 @@ export default function Reports() {
           </div>
           <div style={{ padding: "20px 24px" }}>
             {loading ? (
-              <div style={{ height: 160, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", borderRadius: 10 }} />
+              <div style={{ height: 160, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.2s infinite", borderRadius: 10 }} />
             ) : data?.by_payment?.length ? (
               data.by_payment.map((p, i) => {
                 const total = data.by_payment.reduce((s, x) => s + parseInt(x.cnt), 0);
@@ -184,7 +181,7 @@ export default function Reports() {
             </thead>
             <tbody>
               {loading ? [1,2,3].map(i => (
-                <tr key={i}><td colSpan={5} style={{ padding: "12px 16px" }}><div style={{ height: 20, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", borderRadius: 8 }} /></td></tr>
+                <tr key={i}><td colSpan={5} style={{ padding: "12px 16px" }}><div style={{ height: 20, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.2s infinite", borderRadius: 8 }} /></td></tr>
               )) : data?.top_medicines?.length ? (() => {
                 const maxUnits = Math.max(...data.top_medicines.map(m => parseInt(m.units)));
                 return data.top_medicines.map((m, i) => (

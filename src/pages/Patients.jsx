@@ -28,6 +28,8 @@ export default function Patients() {
 
   useEffect(() => { fetchData(); }, []);
 
+  const thisMonth = new Date().getMonth();
+
   const filtered = patients.filter(p => {
     const ms = p.name.toLowerCase().includes(search.toLowerCase()) || (p.patient_no||"").toLowerCase().includes(search.toLowerCase());
     const mg = genderFilter === "All" || p.gender === genderFilter;
@@ -76,9 +78,16 @@ export default function Patients() {
     btn: (v) => ({ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: "none", background: v === "primary" ? "linear-gradient(135deg,#00e5c0,#0080ff)" : v === "danger" ? "#fee2e2" : "#fff", color: v === "primary" ? "#fff" : v === "danger" ? "#dc2626" : "#0d1b2a", ...(v === "outline" ? { border: "1.5px solid #e3eaf2" } : {}) }),
   };
 
+  const kpis = [
+    { icon: "👥", label: "Total Patients", val: patients.length, color: "#00e5c0", filter: "All" },
+    { icon: "👨", label: "Male", val: patients.filter(p => p.gender === "Male").length, color: "#6366f1", filter: "Male" },
+    { icon: "👩", label: "Female", val: patients.filter(p => p.gender === "Female").length, color: "#f43f5e", filter: "Female" },
+    { icon: "📅", label: "This Month", val: patients.filter(p => new Date(p.created_at).getMonth() === thisMonth).length, color: "#f59e0b", filter: "All" },
+  ];
+
   return (
     <div style={S.pg}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'); @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
@@ -88,19 +97,22 @@ export default function Patients() {
         <button style={S.btn("primary")} onClick={openAdd}>＋ Register Patient</button>
       </div>
 
-      {/* KPIs */}
+      {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
-        {[
-          { icon: "👥", label: "Total Patients", val: patients.length, color: "#00e5c0" },
-          { icon: "👨", label: "Male", val: patients.filter(p => p.gender === "Male").length, color: "#6366f1" },
-          { icon: "👩", label: "Female", val: patients.filter(p => p.gender === "Female").length, color: "#f43f5e" },
-          { icon: "📅", label: "This Month", val: patients.filter(p => new Date(p.created_at).getMonth() === new Date().getMonth()).length, color: "#f59e0b" },
-        ].map((k, i) => (
-          <div key={i} style={{ ...S.card, padding: 20, position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: k.color }} />
+        {kpis.map((k, i) => (
+          <div key={i}
+            onClick={() => setGenderFilter(k.filter)}
+            style={{
+              borderRadius: 16, padding: 20, cursor: "pointer", transition: "all 0.2s",
+              background: genderFilter === k.filter && k.filter !== "All" ? `rgba(${k.color === "#6366f1" ? "99,102,241" : k.color === "#f43f5e" ? "244,63,94" : "0,229,192"},0.08)` : "#fff",
+              border: genderFilter === k.filter && k.filter !== "All" ? `1.5px solid ${k.color}` : "1px solid #e8eef5",
+              boxShadow: genderFilter === k.filter && k.filter !== "All" ? `0 8px 24px ${k.color}30` : "0 1px 6px rgba(0,0,0,0.04)",
+              transform: genderFilter === k.filter && k.filter !== "All" ? "translateY(-2px)" : "none",
+            }}>
             <div style={{ fontSize: 22, marginBottom: 10 }}>{k.icon}</div>
             <div style={{ fontSize: 26, fontWeight: 800, color: "#0d1b2a", letterSpacing: "-0.7px", lineHeight: 1, marginBottom: 4 }}>{loading ? "…" : k.val}</div>
             <div style={{ fontSize: 11, color: "#8a9ab5", fontWeight: 600, textTransform: "uppercase" }}>{k.label}</div>
+            {k.filter !== "All" && <div style={{ fontSize: 11, color: k.color, fontWeight: 600, marginTop: 6 }}>Click to filter →</div>}
           </div>
         ))}
       </div>
@@ -121,7 +133,7 @@ export default function Patients() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
           {[1,2,3,4,5,6].map(i => (
             <div key={i} style={{ ...S.card, padding: 20 }}>
-              <div style={{ height: 120, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", borderRadius: 10 }} />
+              <div style={{ height: 120, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.2s infinite", borderRadius: 10 }} />
             </div>
           ))}
         </div>

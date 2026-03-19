@@ -76,6 +76,13 @@ export default function Suppliers() {
     btn: (v) => ({ display:"inline-flex", alignItems:"center", gap:6, padding:"9px 16px", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", border:"none", background:v==="primary"?"linear-gradient(135deg,#00e5c0,#0080ff)":v==="danger"?"#fee2e2":"#fff", color:v==="primary"?"#fff":v==="danger"?"#dc2626":"#0d1b2a", ...(v==="outline"?{border:"1.5px solid #e3eaf2"}:{}) }),
   };
 
+  const kpis = [
+    { icon:"🏭", label:"Total Suppliers", val:suppliers.length, color:"#00e5c0", filter:"All" },
+    { icon:"✅", label:"Active", val:suppliers.filter(s=>s.status==="Active").length, color:"#6366f1", filter:"Active" },
+    { icon:"⏸️", label:"Inactive", val:suppliers.filter(s=>s.status==="Inactive").length, color:"#f59e0b", filter:"Inactive" },
+    { icon:"💊", label:"Total Medicines", val:suppliers.reduce((s,x)=>s+(parseInt(x.medicines)||0),0), color:"#f43f5e", filter:"All" },
+  ];
+
   return (
     <div style={S.pg}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
@@ -88,22 +95,26 @@ export default function Suppliers() {
         <button style={S.btn("primary")} onClick={openAdd}>＋ Add Supplier</button>
       </div>
 
+      {/* KPI Cards */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
-        {[
-          {icon:"🏭",label:"Total Suppliers",val:suppliers.length,color:"#00e5c0",bg:"rgba(0,229,192,0.1)"},
-          {icon:"✅",label:"Active",val:suppliers.filter(s=>s.status==="Active").length,color:"#6366f1",bg:"rgba(99,102,241,0.1)"},
-          {icon:"⏸️",label:"Inactive",val:suppliers.filter(s=>s.status==="Inactive").length,color:"#f59e0b",bg:"rgba(245,158,11,0.1)"},
-          {icon:"💊",label:"Total Medicines",val:suppliers.reduce((s,x)=>s+(parseInt(x.medicines)||0),0),color:"#f43f5e",bg:"rgba(244,63,94,0.1)"},
-        ].map((k,i)=>(
-          <div key={i} style={{...S.card,padding:20,position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:k.color}}/>
-            <div style={{width:38,height:38,borderRadius:10,background:k.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:12}}>{k.icon}</div>
+        {kpis.map((k,i)=>(
+          <div key={i}
+            onClick={()=>setFilter(k.filter)}
+            style={{
+              borderRadius:16, padding:20, cursor:"pointer", transition:"all 0.2s",
+              background: filter===k.filter && k.filter!=="All" ? `${k.color}15` : "#fff",
+              border: filter===k.filter && k.filter!=="All" ? `1.5px solid ${k.color}` : "1px solid #e8eef5",
+              boxShadow: filter===k.filter && k.filter!=="All" ? `0 8px 24px ${k.color}30` : "0 1px 6px rgba(0,0,0,0.04)",
+              transform: filter===k.filter && k.filter!=="All" ? "translateY(-2px)" : "none",
+            }}>
+            <div style={{fontSize:22,marginBottom:10}}>{k.icon}</div>
             <div style={{fontSize:24,fontWeight:800,color:"#0d1b2a",letterSpacing:"-0.7px",lineHeight:1,marginBottom:4}}>{loading?"…":k.val}</div>
             <div style={{fontSize:11,color:"#8a9ab5",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px"}}>{k.label}</div>
           </div>
         ))}
       </div>
 
+      {/* Table */}
       <div style={S.card}>
         <div style={{display:"flex",gap:10,padding:"16px 20px",borderBottom:"1px solid #f0f4f8",flexWrap:"wrap"}}>
           <div style={{position:"relative",flex:1,minWidth:180}}>
@@ -127,7 +138,10 @@ export default function Suppliers() {
               {loading ? [1,2,3].map(i=>(
                 <tr key={i}><td colSpan={7} style={{padding:"12px 16px"}}><div style={{height:20,background:"linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)",backgroundSize:"200% 100%",borderRadius:8}}/></td></tr>
               )) : filtered.length===0 ? (
-                <tr><td colSpan={7} style={{textAlign:"center",padding:40,color:"#8a9ab5",fontSize:14}}>No suppliers found</td></tr>
+                <tr><td colSpan={7} style={{textAlign:"center",padding:40,color:"#8a9ab5",fontSize:14}}>
+                  <div style={{fontSize:36,marginBottom:8}}>🏭</div>
+                  No suppliers found
+                </td></tr>
               ) : filtered.map(s=>(
                 <tr key={s.id} style={{borderTop:"1px solid #f0f4f8"}}
                   onMouseEnter={e=>e.currentTarget.style.background="#fafcff"}
@@ -162,6 +176,7 @@ export default function Suppliers() {
         </div>
       </div>
 
+      {/* Add/Edit Modal */}
       {modal==="form"&&(
         <div style={{position:"fixed",inset:0,background:"rgba(13,27,42,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
           <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:480,boxShadow:"0 24px 64px rgba(0,0,0,0.15)"}}>
@@ -197,6 +212,7 @@ export default function Suppliers() {
         </div>
       )}
 
+      {/* View Modal */}
       {modal==="view"&&viewTarget&&(
         <div style={{position:"fixed",inset:0,background:"rgba(13,27,42,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
           <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:420,boxShadow:"0 24px 64px rgba(0,0,0,0.15)"}}>
@@ -229,6 +245,7 @@ export default function Suppliers() {
         </div>
       )}
 
+      {/* Delete Modal */}
       {modal==="delete"&&deleteTarget&&(
         <div style={{position:"fixed",inset:0,background:"rgba(13,27,42,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
           <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:380,padding:28,boxShadow:"0 24px 64px rgba(0,0,0,0.15)",textAlign:"center"}}>
