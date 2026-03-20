@@ -37,17 +37,6 @@ const styles = `
   .panel-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 22px; }
   .panel-title { font-size: 15px; font-weight: 800; color: #0d1b2a; }
   .panel-sub { font-size: 12px; color: #8a9ab5; margin-top: 3px; }
-  .bar-chart { display: flex; align-items: flex-end; gap: 12px; height: 160px; }
-  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
-  .bars { flex: 1; width: 100%; display: flex; align-items: flex-end; gap: 3px; }
-  .bar { flex: 1; border-radius: 5px 5px 0 0; min-height: 4px; cursor: pointer; }
-  .bar.s { background: linear-gradient(180deg,#00e5c0,#00b89c); }
-  .bar.r { background: linear-gradient(180deg,#6366f1,#4f46e5); }
-  .bar-lbl { font-size: 10px; color: #b0bfcc; font-weight: 700; }
-  .chart-legend { display: flex; gap: 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0f4f8; }
-  .leg { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #8a9ab5; font-weight: 600; }
-  .leg-dot { width: 10px; height: 10px; border-radius: 3px; }
-  .leg-dot.teal{background:#00e5c0;} .leg-dot.indigo{background:#6366f1;}
   .act-list { display: flex; flex-direction: column; }
   .act-row { display: flex; align-items: flex-start; gap: 11px; padding: 10px 0; border-bottom: 1px solid #f4f7fb; }
   .act-row:last-child { border-bottom: none; }
@@ -69,14 +58,6 @@ const styles = `
   .sbar.critical{background:#ef4444;} .sbar.low{background:#f59e0b;}
   .chip { display: inline-flex; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; }
   .chip.critical{background:#fee2e2;color:#dc2626;} .chip.low{background:#fef3c7;color:#b45309;}
-  .exp-list { display: flex; flex-direction: column; gap: 9px; }
-  .exp-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #f8fafc; border-radius: 11px; border: 1px solid #edf2f7; }
-  .exp-ico { font-size: 18px; }
-  .exp-info { flex: 1; min-width: 0; }
-  .exp-name { font-size: 13px; font-weight: 700; color: #0d1b2a; }
-  .exp-batch { font-size: 11px; color: #b0bfcc; }
-  .exp-tag { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; }
-  .exp-tag.urgent{background:#fee2e2;color:#dc2626;} .exp-tag.soon{background:#fef3c7;color:#b45309;}
   .section-chip { font-size: 11px; font-weight: 800; padding: 4px 11px; border-radius: 20px; }
   .section-chip.red{background:#fee2e2;color:#dc2626;} .section-chip.amber{background:#fef3c7;color:#b45309;}
   .skeleton { background: linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 8px; }
@@ -84,14 +65,6 @@ const styles = `
   @keyframes fadeUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
   @media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr);}.dash-main{grid-template-columns:1fr;}.dash-bottom{grid-template-columns:1fr;}.quick-actions{grid-template-columns:repeat(2,1fr);}.dash{padding:20px 16px;}}
 `;
-
-const SALES_DATA = [
-  { month: "Sep", s: 68, r: 45 }, { month: "Oct", s: 82, r: 58 },
-  { month: "Nov", s: 74, r: 50 }, { month: "Dec", s: 95, r: 72 },
-  { month: "Jan", s: 88, r: 61 }, { month: "Feb", s: 110, r: 84 },
-  { month: "Mar", s: 98, r: 76 },
-];
-const maxVal = Math.max(...SALES_DATA.map(d => d.s));
 
 function timeAgo(dateStr) {
   const diff = Math.floor((new Date() - new Date(dateStr)) / 1000);
@@ -125,6 +98,8 @@ export default function Dashboard() {
     { cls: "c4", icon: "⚠️", val: stats.expiring_soon + stats.expired, lbl: "Expiring / Expired", chip: "Act now", chipCls: "warn", path: "/expired" },
   ] : [];
 
+  const topColors = ["#00e5c0","#6366f1","#f59e0b","#f43f5e","#0080ff"];
+
   return (
     <>
       <style>{styles}</style>
@@ -140,6 +115,7 @@ export default function Dashboard() {
           <div className="dash-date-pill">📅 {dateStr}</div>
         </div>
 
+        {/* KPI Cards */}
         <div className="stat-grid">
           {loading ? [1,2,3,4].map(i => (
             <div key={i} className="stat-card c1">
@@ -159,6 +135,7 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Quick Actions */}
         <div className="quick-actions">
           {[
             { icon: "📋", label: "New Prescription", path: "/prescriptions" },
@@ -173,29 +150,42 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Top Medicines + Recent Sales */}
         <div className="dash-main">
           <div className="panel">
             <div className="panel-header">
               <div>
-                <div className="panel-title">Sales & Prescriptions</div>
-                <div className="panel-sub">Monthly overview</div>
+                <div className="panel-title">Top Selling Medicines</div>
+                <div className="panel-sub">Most sold this month</div>
               </div>
+              <span style={{fontSize:11,fontWeight:700,padding:"4px 11px",borderRadius:20,background:"#f0f4f8",color:"#8a9ab5",cursor:"pointer"}} onClick={() => navigate("/reports")}>View Reports →</span>
             </div>
-            <div className="bar-chart">
-              {SALES_DATA.map((d) => (
-                <div key={d.month} className="bar-col">
-                  <div className="bars">
-                    <div className="bar s" style={{ height: `${(d.s / maxVal) * 130}px` }} />
-                    <div className="bar r" style={{ height: `${(d.r / maxVal) * 130}px` }} />
-                  </div>
-                  <span className="bar-lbl">{d.month}</span>
-                </div>
-              ))}
-            </div>
-            <div className="chart-legend">
-              <div className="leg"><div className="leg-dot teal" /> Sales (KES K)</div>
-              <div className="leg"><div className="leg-dot indigo" /> Prescriptions</div>
-            </div>
+            {loading ? (
+              <div className="skeleton" style={{height:160,borderRadius:10}}/>
+            ) : stats?.top_medicines?.length ? (
+              <div>
+                {stats.top_medicines.map((m, i) => {
+                  const maxUnits = Math.max(...stats.top_medicines.map(x => parseInt(x.units)));
+                  const pct = Math.round((parseInt(m.units) / maxUnits) * 100);
+                  return (
+                    <div key={i} style={{marginBottom:16}}>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:700,color:"#0d1b2a",marginBottom:6}}>
+                        <span>{m.medicine_name}</span>
+                        <span style={{color:topColors[i]}}>{m.units} units</span>
+                      </div>
+                      <div style={{height:7,background:"#f0f4f8",borderRadius:4,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:`${pct}%`,background:topColors[i],borderRadius:4,transition:"width 0.6s"}}/>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{textAlign:"center",padding:32,color:"#8a9ab5",fontSize:13}}>
+                <div style={{fontSize:36,marginBottom:8}}>📊</div>
+                No sales data yet — make your first sale!
+              </div>
+            )}
           </div>
 
           <div className="panel">
@@ -230,6 +220,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Low Stock + Expiring */}
         <div className="dash-bottom">
           <div className="panel">
             <div className="panel-header">

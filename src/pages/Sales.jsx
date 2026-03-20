@@ -126,50 +126,57 @@ export default function Sales() {
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
   };
 
-  const S = {
-    root: { display: "flex", minHeight: "calc(100vh - 62px)", fontFamily: "'Plus Jakarta Sans',sans-serif", background: "#f4f7fb" },
-    left: { flex: 1, display: "flex", flexDirection: "column", padding: "24px 20px 24px 28px", overflow: "hidden", minWidth: 0 },
-    right: { width: 340, background: "#0b0f1a", display: "flex", flexDirection: "column", padding: "24px 20px" },
-    inp: { width: "100%", padding: "10px 13px 10px 36px", borderRadius: 10, fontSize: 13, fontFamily: "inherit", border: "1.5px solid #e3eaf2", outline: "none", color: "#0d1b2a", background: "#fff", boxSizing: "border-box" },
-    medCard: (inCart) => ({ background: "#fff", borderRadius: 13, padding: 15, border: `1.5px solid ${inCart ? "#00e5c0" : "#e8eef5"}`, cursor: "pointer", transition: "all 0.18s", boxShadow: inCart ? "0 4px 16px rgba(0,229,192,0.15)" : "0 1px 4px rgba(0,0,0,0.04)" }),
-  };
-
   return (
-    <div style={S.root}>
+    <div style={{ display: "flex", height: "calc(100vh - 62px)", fontFamily: "'Plus Jakarta Sans',sans-serif", background: "#f4f7fb", overflow: "hidden" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
-      {/* LEFT */}
-      <div style={S.left}>
+      {/* LEFT — Medicine Grid */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 20px 24px 28px", overflow: "hidden" }}>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#0d1b2a", letterSpacing: "-0.6px", marginBottom: 12 }}>Sales / POS</div>
           <div style={{ position: "relative" }}>
             <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 13 }}>🔍</span>
-            <input style={S.inp} placeholder="Search medicines..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input
+              style={{ width: "100%", padding: "10px 13px 10px 36px", borderRadius: 10, fontSize: 13, fontFamily: "inherit", border: "1.5px solid #e3eaf2", outline: "none", color: "#0d1b2a", background: "#fff", boxSizing: "border-box" }}
+              placeholder="Search medicines..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
         </div>
 
         {loading ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 11 }}>
             {[1,2,3,4,5,6].map(i => (
-              <div key={i} style={{ borderRadius: 13, padding: 15, height: 110, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%" }} />
+              <div key={i} style={{ borderRadius: 13, height: 110, background: "linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)", backgroundSize: "200% 100%" }} />
             ))}
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 11, overflowY: "auto", flex: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 11, overflowY: "auto", flex: 1, paddingRight: 4 }}>
             {filtered.map(med => {
               const inCart = cart.some(i => i.medicine_id === med.id);
               return (
-                <div key={med.id} style={S.medCard(inCart)} onClick={() => addToCart(med)}
-                  onMouseEnter={e => { if (!inCart) e.currentTarget.style.borderColor = "#00e5c0"; }}
-                  onMouseLeave={e => { if (!inCart) e.currentTarget.style.borderColor = "#e8eef5"; }}>
-                  <div style={{ fontSize: 26, marginBottom: 8 }}>💊</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0d1b2a", marginBottom: 3, lineHeight: 1.3 }}>{med.name}</div>
+                <div key={med.id}
+                  onClick={() => addToCart(med)}
+                  style={{
+                    background: inCart ? "#f0fdf9" : "#fff",
+                    borderRadius: 13, padding: 15,
+                    border: `1.5px solid ${inCart ? "#00e5c0" : "#e8eef5"}`,
+                    cursor: "pointer", transition: "all 0.18s",
+                    boxShadow: inCart ? "0 4px 16px rgba(0,229,192,0.15)" : "0 1px 4px rgba(0,0,0,0.04)",
+                    height: "fit-content",
+                  }}
+                  onMouseEnter={e => { if (!inCart) { e.currentTarget.style.borderColor = "#00e5c0"; e.currentTarget.style.transform = "translateY(-2px)"; }}}
+                  onMouseLeave={e => { if (!inCart) { e.currentTarget.style.borderColor = "#e8eef5"; e.currentTarget.style.transform = "translateY(0)"; }}}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0d1b2a", marginBottom: 4, lineHeight: 1.3 }}>{med.name}</div>
                   <div style={{ fontSize: 11, color: "#8a9ab5", marginBottom: 8 }}>{med.category || "General"}</div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: "#00b89c" }}>KES {parseFloat(med.price).toFixed(2)}</span>
-                    <span style={{ fontSize: 10, color: "#8a9ab5", fontWeight: 600 }}>{med.stock} left</span>
+                    <span style={{ fontSize: 10, color: med.stock <= 10 ? "#f43f5e" : "#8a9ab5", fontWeight: 600 }}>{med.stock} left</span>
                   </div>
-                  {inCart && <div style={{ marginTop: 8, fontSize: 10, fontWeight: 700, color: "#00b89c", background: "rgba(0,229,192,0.1)", padding: "3px 8px", borderRadius: 6, textAlign: "center" }}>✓ In Cart</div>}
+                  {inCart && (
+                    <div style={{ marginTop: 8, fontSize: 10, fontWeight: 700, color: "#00b89c", background: "rgba(0,229,192,0.1)", padding: "3px 8px", borderRadius: 6, textAlign: "center" }}>✓ In Cart</div>
+                  )}
                 </div>
               );
             })}
@@ -181,10 +188,13 @@ export default function Sales() {
       </div>
 
       {/* RIGHT — Cart */}
-      <div style={S.right}>
+      <div style={{ width: 340, background: "#0b0f1a", display: "flex", flexDirection: "column", padding: "24px 20px", height: "calc(100vh - 62px)", overflow: "hidden" }}>
+
+        {/* Cart Header */}
         <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 4 }}>🛒 Cart</div>
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 16 }}>{cart.length} item(s)</div>
 
+        {/* Customer */}
         <input
           style={{ width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 12, fontFamily: "inherit", border: "1.5px solid rgba(255,255,255,0.1)", outline: "none", color: "#fff", background: "rgba(255,255,255,0.06)", marginBottom: 14, boxSizing: "border-box" }}
           placeholder="Customer name (optional)"
@@ -192,6 +202,7 @@ export default function Sales() {
           onChange={e => setCustomer(e.target.value)}
         />
 
+        {/* Cart Items — scrollable */}
         <div style={{ flex: 1, overflowY: "auto", marginBottom: 14 }}>
           {cart.length === 0 ? (
             <div style={{ textAlign: "center", padding: "32px 0", color: "rgba(255,255,255,0.2)" }}>
@@ -216,6 +227,7 @@ export default function Sales() {
           ))}
         </div>
 
+        {/* Totals — always visible */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 14, marginBottom: 14 }}>
           {[
             { label: "Subtotal", val: `KES ${subtotal.toFixed(2)}` },
@@ -230,12 +242,14 @@ export default function Sales() {
           </div>
         </div>
 
+        {/* Payment Method — always visible */}
         <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
           {["Cash", "M-Pesa", "Card"].map(p => (
             <button key={p} onClick={() => setPayMethod(p)} style={{ flex: 1, padding: "8px 4px", borderRadius: 9, border: `1.5px solid ${payMethod === p ? "#00e5c0" : "rgba(255,255,255,0.1)"}`, background: payMethod === p ? "rgba(0,229,192,0.15)" : "none", color: payMethod === p ? "#00e5c0" : "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{p}</button>
           ))}
         </div>
 
+        {/* Checkout Button — always visible */}
         <button
           onClick={handleCheckout}
           disabled={cart.length === 0 || processing}
@@ -253,7 +267,7 @@ export default function Sales() {
               <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>Sale Complete!</div>
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 4 }}>#{receipt.sale_number}</div>
             </div>
-            <div style={{ padding: "20px 24px" }}>
+            <div style={{ padding: "20px 24px", maxHeight: 300, overflowY: "auto" }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#8a9ab5", textTransform: "uppercase", marginBottom: 10 }}>Items</div>
               {receipt.items.map((item, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
@@ -269,8 +283,9 @@ export default function Sales() {
                   { label: "Payment", val: receipt.payment_method },
                   { label: "Customer", val: receipt.customer_name },
                 ].map((r, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6, fontWeight: r.bold ? 800 : 500, color: r.bold ? "#0d1b2a" : "#374151" }}>
-                    <span>{r.label}</span><span style={{ color: r.bold ? "#00b89c" : "#0d1b2a" }}>{r.val}</span>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6, fontWeight: r.bold ? 800 : 500 }}>
+                    <span>{r.label}</span>
+                    <span style={{ color: r.bold ? "#00b89c" : "#0d1b2a" }}>{r.val}</span>
                   </div>
                 ))}
               </div>
