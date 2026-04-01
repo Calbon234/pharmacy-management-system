@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
 import { getMedicines } from "../services/inventoryService";
 import { createSale } from "../services/salesService";
+import { getPatients } from "../services/patientService";
 
 export default function Sales() {
   const [medicines, setMedicines] = useState([]);
+  const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState([]);
   const [search, setSearch] = useState("");
   const [payMethod, setPayMethod] = useState("Cash");
   const [customer, setCustomer] = useState("");
+  const [patientId, setPatientId] = useState("");        // ← new
+  const [patientSearch, setPatientSearch] = useState(""); // ← new
   const [processing, setProcessing] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
@@ -21,11 +25,32 @@ export default function Sales() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchMedicines(); }, []);
+  const fetchPatients = async () => {
+    try {
+      const res = await getPatients();
+      setPatients(res.data.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => {
+    fetchMedicines();
+    fetchPatients();
+  }, []);
 
   const filtered = medicines.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase()) && m.stock > 0
   );
+
+  // Filter patients for dropdown
+  const filteredPatients = patients.filter(p =>
+    p.name.toLowerCase().includes(patientSearch.toLowerCase())
+  ).slice(0, 5);
+
+  const selectPatient = (patient) => {
+    setPatientId(patient.id);
+    setCustomer(patient.name);
+    setPatientSearch(patient.name);
+  };
 
   const addToCart = (med) => {
     setCart(prev => {
@@ -55,6 +80,7 @@ export default function Sales() {
         customer_name: customer || "Walk-in Customer",
         payment_method: payMethod,
         cashier_id: user.id || 1,
+        patient_id: patientId || 0,   // ← send patient_id for SMS
         items: cart,
       });
       setReceipt({
@@ -67,6 +93,8 @@ export default function Sales() {
       });
       setCart([]);
       setCustomer("");
+      setPatientId("");
+      setPatientSearch("");
       await fetchMedicines();
     } catch (e) { alert(e.response?.data?.message || "Checkout failed."); }
     finally { setProcessing(false); }
@@ -128,7 +156,13 @@ export default function Sales() {
 
   return (
     <div style={{ display: "flex", height: "calc(100vh - 62px)", fontFamily: "'Plus Jakarta Sans',sans-serif", background: "#f4f7fb", overflow: "hidden" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        .patient-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1a2235; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; z-index: 100; margin-top: 4px; overflow: hidden; }
+        .patient-option { padding: 9px 12px; cursor: pointer; font-size: 12px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .patient-option:hover { background: rgba(0,229,192,0.1); color: #00e5c0; }
+        .patient-option:last-child { border-bottom: none; }
+      `}</style>
 
       {/* LEFT — Medicine Grid */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 20px 24px 28px", overflow: "hidden" }}>
@@ -190,19 +224,37 @@ export default function Sales() {
       {/* RIGHT — Cart */}
       <div style={{ width: 340, background: "#0b0f1a", display: "flex", flexDirection: "column", padding: "24px 20px", height: "calc(100vh - 62px)", overflow: "hidden" }}>
 
-        {/* Cart Header */}
         <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 4 }}>🛒 Cart</div>
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 16 }}>{cart.length} item(s)</div>
 
-        {/* Customer */}
-        <input
-          style={{ width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 12, fontFamily: "inherit", border: "1.5px solid rgba(255,255,255,0.1)", outline: "none", color: "#fff", background: "rgba(255,255,255,0.06)", marginBottom: 14, boxSizing: "border-box" }}
-          placeholder="Customer name (optional)"
-          value={customer}
-          onChange={e => setCustomer(e.target.value)}
-        />
+        {/* Patient Search — with dropdown */}
+        <div style={{ position: "relative", marginBottom: 14 }}>
+          <input
+            style={{ width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 12, fontFamily: "inherit", border: `1.5px solid ${patientId ? "#00e5c0" : "rgba(255,255,255,0.1)"}`, outline: "none", color: "#fff", background: "rgba(255,255,255,0.06)", boxSizing: "border-box" }}
+            placeholder="Search patient for SMS receipt..."
+            value={patientSearch}
+            onChange={e => {
+              setPatientSearch(e.target.value);
+              setCustomer(e.target.value);
+              setPatientId("");
+            }}
+          />
+          {patientId && (
+            <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#00e5c0" }}>✓ SMS</span>
+          )}
+          {/* Dropdown */}
+          {patientSearch && !patientId && filteredPatients.length > 0 && (
+            <div className="patient-dropdown">
+              {filteredPatients.map(p => (
+                <div key={p.id} className="patient-option" onClick={() => selectPatient(p)}>
+                  👤 {p.name} {p.phone ? `· ${p.phone}` : "· no phone"}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-        {/* Cart Items — scrollable */}
+        {/* Cart Items */}
         <div style={{ flex: 1, overflowY: "auto", marginBottom: 14 }}>
           {cart.length === 0 ? (
             <div style={{ textAlign: "center", padding: "32px 0", color: "rgba(255,255,255,0.2)" }}>
@@ -227,7 +279,7 @@ export default function Sales() {
           ))}
         </div>
 
-        {/* Totals — always visible */}
+        {/* Totals */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 14, marginBottom: 14 }}>
           {[
             { label: "Subtotal", val: `KES ${subtotal.toFixed(2)}` },
@@ -242,20 +294,27 @@ export default function Sales() {
           </div>
         </div>
 
-        {/* Payment Method — always visible */}
+        {/* Payment Method */}
         <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
           {["Cash", "M-Pesa", "Card"].map(p => (
             <button key={p} onClick={() => setPayMethod(p)} style={{ flex: 1, padding: "8px 4px", borderRadius: 9, border: `1.5px solid ${payMethod === p ? "#00e5c0" : "rgba(255,255,255,0.1)"}`, background: payMethod === p ? "rgba(0,229,192,0.15)" : "none", color: payMethod === p ? "#00e5c0" : "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{p}</button>
           ))}
         </div>
 
-        {/* Checkout Button — always visible */}
+        {/* Checkout Button */}
         <button
           onClick={handleCheckout}
           disabled={cart.length === 0 || processing}
           style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: cart.length === 0 ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg,#00e5c0,#0080ff)", color: cart.length === 0 ? "rgba(255,255,255,0.2)" : "#fff", fontSize: 14, fontWeight: 800, cursor: cart.length === 0 ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
           {processing ? "Processing..." : `Checkout · KES ${total.toFixed(2)}`}
         </button>
+
+        {/* SMS hint */}
+        {patientId ? (
+          <div style={{ textAlign: "center", fontSize: 11, color: "#00e5c0", marginTop: 8 }}>📱 SMS receipt will be sent to patient</div>
+        ) : (
+          <div style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 8 }}>Search a patient above to send SMS receipt</div>
+        )}
       </div>
 
       {/* Receipt Modal */}

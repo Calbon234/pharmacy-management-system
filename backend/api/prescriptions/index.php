@@ -1,6 +1,7 @@
 <?php
 require_once '../../config/database.php';
 require_once '../../config/helpers.php';
+require_once '../../config/sms.php';   // ← SMS helper
 setCORS();
 requireAuth();
 
@@ -84,9 +85,49 @@ if ($method === 'PUT') {
     if (!$id) error('Prescription ID required.');
     $b      = getBody();
     $status = $b['status'] ?? 'Pending';
-    $stmt   = $db->prepare('UPDATE prescriptions SET status=? WHERE id=?');
-    $stmt->bind_param('si', $status, $id);
-    if (!$stmt->execute()) error('Failed to update prescription.');
+
+    // Fetch prescription + patient before updating
+    $stmt = $db->prepare('
+        SELECT p.rx_number, p.patient_id, pt.name AS patient_name, pt.phone
+        FROM prescriptions p
+        LEFT JOIN patients pt ON p.patient_id = pt.id
+        WHERE p.id = ?
+    ');
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $rx = $stmt->get_result()->fetch_assoc();
+
+    // Update status
+    $stmt2 = $db->prepare('UPDATE prescriptions SET status=? WHERE id=?');
+    $stmt2->bind_param('si', $status, $id);
+    if (!$stmt2->execute()) error('Failed to update prescription.');
+
+    // ── SMS: Notify patient when prescription is fulfilled ────────
+    if ($status === 'Fulfilled' && $rx && !empty($rx['phone'])) {
+        // Get prescription items
+        $stmt3 = $db->prepare('SELECT medicine_name, quantity, dosage FROM prescription_items WHERE prescription_id=?');
+        $stmt3->bind_param('i', $id);
+        $stmt3->execute();
+        $items = $stmt3->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        $item_lines = [];
+        foreach ($items as $item) {
+            $line = '- ' . $item['medicine_name'] . ' x' . $item['quantity'];
+            if (!empty($item['dosage'])) $line .= ' (' . $item['dosage'] . ')';
+            $item_lines[] = $line;
+        }
+        $items_text = implode("\n", $item_lines);
+
+        $message = "Dear {$rx['patient_name']},\n"
+                 . "Your prescription {$rx['rx_number']} is ready for pickup at PharmaSys.\n\n"
+                 . "Medicines:\n{$items_text}\n\n"
+                 . "Please present this message or your ID when collecting.\n"
+                 . "Thank you!";
+
+        sendSMS($rx['phone'], $message);
+    }
+    // ─────────────────────────────────────────────────────────────
+
     success([], 'Prescription updated.');
 }
 

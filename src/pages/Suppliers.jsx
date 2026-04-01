@@ -226,7 +226,6 @@ export default function Suppliers() {
                 {icon:"📞",label:"Phone",val:viewTarget.phone||"—"},
                 {icon:"📧",label:"Email",val:viewTarget.email||"—"},
                 {icon:"📍",label:"Address",val:viewTarget.address||"—"},
-                {icon:"💊",label:"Medicines Supplied",val:`${viewTarget.medicines||0} items`},
               ].map((r,i)=>(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:"#f8fafc",borderRadius:10}}>
                   <span style={{fontSize:18}}>{r.icon}</span>

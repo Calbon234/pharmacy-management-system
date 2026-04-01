@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { getMedicines, addMedicine, updateMedicine, deleteMedicine } from "../services/inventoryService";
-import { getSuppliers } from "../services/supplierService";
+import { getSuppliers } from "../services/supplierService.js";
+import { AuthContext } from "../context/AuthContext";
 
 const empty = { name: "", batch_number: "", category: "", supplier_id: "", price: "", stock: "", min_stock: "20", expiry_date: "", description: "" };
 const CATEGORIES = ["Antibiotics","Analgesics","Antidiabetics","Antihypertensives","Gastrointestinal","Vitamins","Respiratory","Other"];
 
 export default function Inventory() {
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'admin';
+
   const [medicines, setMedicines] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,7 +129,10 @@ export default function Inventory() {
           <div style={{fontSize:24,fontWeight:800,color:"#0d1b2a",letterSpacing:"-0.6px"}}>Inventory</div>
           <div style={{fontSize:13,color:"#8a9ab5",marginTop:4,fontWeight:500}}>{medicines.length} medicines total · {medicines.filter(m=>m.stock<=m.min_stock).length} low stock</div>
         </div>
-        <button style={S.btn("primary")} onClick={openAdd}>＋ Add Medicine</button>
+        {/* ADMIN: hide Add Medicine button — read-only raincheck access */}
+        {!isAdmin && (
+          <button style={S.btn("primary")} onClick={openAdd}>＋ Add Medicine</button>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -166,16 +173,17 @@ export default function Inventory() {
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead>
               <tr style={{background:"#f8fafc"}}>
-                {["Medicine","Batch","Category","Supplier","Price","Stock","Expiry","Status","Actions"].map(h=>(
-                  <th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:"#8a9ab5",textTransform:"uppercase",letterSpacing:"0.6px",whiteSpace:"nowrap"}}>{h}</th>
+                {/* ADMIN: hide Actions column header */}
+                {["Medicine","Batch","Category","Supplier","Price","Stock","Expiry","Status",...(!isAdmin?["Actions"]:[""])].map((h,i)=>(
+                  <th key={i} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:"#8a9ab5",textTransform:"uppercase",letterSpacing:"0.6px",whiteSpace:"nowrap"}}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? [1,2,3,4,5].map(i=>(
-                <tr key={i}><td colSpan={9} style={{padding:"12px 16px"}}><div style={{height:20,background:"linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.2s infinite",borderRadius:8}}/></td></tr>
+                <tr key={i}><td colSpan={isAdmin?8:9} style={{padding:"12px 16px"}}><div style={{height:20,background:"linear-gradient(90deg,#f0f4f8 25%,#e8eef5 50%,#f0f4f8 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.2s infinite",borderRadius:8}}/></td></tr>
               )) : paginated.length === 0 ? (
-                <tr><td colSpan={9} style={{textAlign:"center",padding:48,color:"#8a9ab5",fontSize:14}}>
+                <tr><td colSpan={isAdmin?8:9} style={{textAlign:"center",padding:48,color:"#8a9ab5",fontSize:14}}>
                   <div style={{fontSize:36,marginBottom:8}}>🔍</div>
                   No medicines found
                 </td></tr>
@@ -204,12 +212,15 @@ export default function Inventory() {
                     <td style={{padding:"13px 16px"}}>
                       <span style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:st.bg,color:st.color}}>{st.label}</span>
                     </td>
-                    <td style={{padding:"13px 16px"}}>
-                      <div style={{display:"flex",gap:6}}>
-                        <button onClick={()=>openEdit(m)} style={{...S.btn("outline"),padding:"6px 10px",fontSize:12}}>✏️</button>
-                        <button onClick={()=>{setDeleteTarget(m);setModal("delete");}} style={{...S.btn("danger"),padding:"6px 10px",fontSize:12}}>🗑</button>
-                      </div>
-                    </td>
+                    {/* ADMIN: hide edit/delete action buttons */}
+                    {!isAdmin && (
+                      <td style={{padding:"13px 16px"}}>
+                        <div style={{display:"flex",gap:6}}>
+                          <button onClick={()=>openEdit(m)} style={{...S.btn("outline"),padding:"6px 10px",fontSize:12}}>✏️</button>
+                          <button onClick={()=>{setDeleteTarget(m);setModal("delete");}} style={{...S.btn("danger"),padding:"6px 10px",fontSize:12}}>🗑</button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -231,8 +242,8 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* Add/Edit Modal */}
-      {modal==="form" && (
+      {/* Add/Edit Modal — only accessible by pharmacist, not admin */}
+      {modal==="form" && !isAdmin && (
         <div style={{position:"fixed",inset:0,background:"rgba(13,27,42,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
           <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:560,boxShadow:"0 24px 64px rgba(0,0,0,0.15)",maxHeight:"90vh",overflowY:"auto"}}>
             <div style={{padding:"22px 24px",borderBottom:"1px solid #f0f4f8",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,background:"#fff",zIndex:1}}>
@@ -281,8 +292,8 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Delete Modal */}
-      {modal==="delete"&&deleteTarget&&(
+      {/* Delete Modal — only accessible by pharmacist, not admin */}
+      {modal==="delete" && deleteTarget && !isAdmin && (
         <div style={{position:"fixed",inset:0,background:"rgba(13,27,42,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
           <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:380,padding:28,boxShadow:"0 24px 64px rgba(0,0,0,0.15)",textAlign:"center"}}>
             <div style={{fontSize:44,marginBottom:14}}>🗑️</div>
